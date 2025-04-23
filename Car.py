@@ -121,7 +121,7 @@ class Car:
             (self.position[0] + CAR_SIZE[0] / 2 * math.cos(math.radians(self.angle)) + CAR_SIZE[1] / 2 * math.sin(math.radians(self.angle)),
              self.position[1] + CAR_SIZE[0] / 2 * math.sin(math.radians(self.angle)) - CAR_SIZE[1] / 2 * math.cos(math.radians(self.angle)))
         ]
-        pygame.draw.polygon(screen, (255, 0, 0), points)
+        pygame.draw.polygon(screen, (150, 255, 150), points)
         arrow_length = 30
         arrow_x = self.position[0] + arrow_length * math.cos(math.radians(self.angle))
         arrow_y = self.position[1] + arrow_length * math.sin(math.radians(self.angle))
