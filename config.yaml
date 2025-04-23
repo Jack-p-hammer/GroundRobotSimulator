@@ -1,0 +1,20 @@
+window:
+  width: 800
+  height: 600
+  background_color: [255, 255, 255]
+  title: "Car Simulation Window"
+
+cars:
+  - id: car1
+    position: [400, 200]
+    angle: 0
+    speed: 0.75
+  # - id: car2
+  #   position: [700, 500]
+  #   angle: 180
+  #   speed: 2
+
+obstacles:
+  - [200, 150, 100, 200]
+  - [500, 100, 50, 300]
+  - [300, 400, 250, 50]
