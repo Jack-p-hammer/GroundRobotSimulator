@@ -4,7 +4,7 @@ import math
 
 # Constants
 CAR_SIZE = (40, 20)
-LIDAR_RANGE = 300
+LIDAR_RANGE = 250
 NUM_LIDAR_POINTS = 120
 
 # Car Class
