@@ -82,6 +82,15 @@ def main():
                 running = False
 
         keys = pygame.key.get_pressed()
+
+        # Check key presses for various actions
+        if keys[pygame.K_ESCAPE]: # Pressing Escape Closes Window
+            running = False
+        if keys[pygame.K_r]: # {Pressing resets all cars to their original positions}
+            for car in cars:
+                car.reset_position()
+        
+
         for car in cars:
             car.update(keys, walls, collision_map)
         draw_room()
