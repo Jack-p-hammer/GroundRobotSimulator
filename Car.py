@@ -125,7 +125,8 @@ class Car:
         arrow_length = 30
         arrow_x = self.position[0] + arrow_length * math.cos(math.radians(self.angle))
         arrow_y = self.position[1] + arrow_length * math.sin(math.radians(self.angle))
-        pygame.draw.line(screen, (0, 0, 255), (self.position[0], self.position[1]), (arrow_x, arrow_y), 3)
+        pygame.draw.line(screen, (0, 0, 0), (self.position[0], self.position[1]), (arrow_x, arrow_y), 3)
+        pygame.draw.circle(screen, (0, 0, 0), (arrow_x, arrow_y), 5)
 
         lidar = self.get_lidar_measurements(collision_map)
         for distance, point in lidar:
