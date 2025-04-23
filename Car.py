@@ -129,7 +129,8 @@ class Car:
         pygame.draw.circle(screen, (0, 0, 0), (arrow_x, arrow_y), 5)
 
         lidar = self.get_lidar_measurements(collision_map)
-        for distance, point in lidar:
+        for distance, x,y in lidar:
+            point = (int(x), int(y))
             normalized = distance / LIDAR_RANGE
             r = int(255 * normalized)
             g = 0
@@ -143,7 +144,7 @@ class Car:
         Uses a precomputed collision map (2D boolean array) to simulate
         fast LiDAR raycasting. Returns both distance and hit point.
         """
-        measurements = []
+        measurements = np.zeros((NUM_LIDAR_POINTS, 3), dtype=float)
         height, width = collision_map.shape[1], collision_map.shape[0]  # x = width, y = height
 
         # Precompute angle values
@@ -163,16 +164,19 @@ class Car:
                 y = int(self.position[1] + dist * sin_a)
 
                 if x < 0 or x >= width or y < 0 or y >= height:
-                    measurements.append((dist, (x, y)))
+                    measurements[i] = dist, x, y
                     break
 
                 if collision_map[x, y]:
-                    measurements.append((dist, (x, y)))
+                    measurements[i] = dist, x, y
                     break
             else:
                 x = int(self.position[0] + LIDAR_RANGE * cos_a)
                 y = int(self.position[1] + LIDAR_RANGE * sin_a)
-                measurements.append((LIDAR_RANGE, (x, y)))
+                measurements[i] = LIDAR_RANGE, x, y
+        # adding noise
+        noise = np.random.normal(0, 1, (len(measurements),2))
+        measurements[:, 1:] += noise[:, :] * 0.1
 
         return measurements
 
