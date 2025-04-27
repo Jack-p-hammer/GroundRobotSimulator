@@ -1,11 +1,15 @@
 import pygame
 import numpy as np
 import math
+from Occupancygrid import OccupancyGrid 
+
+
 
 # Constants
 CAR_SIZE = (40, 20)
 LIDAR_RANGE = 300
 NUM_LIDAR_POINTS = 120
+
 
 # Car Class
 class Car:
@@ -25,14 +29,9 @@ class Car:
         self.angle = angle
         self.angular_velocity = 0.0
 
-        self.target_distance_from_wall = 50
-        self.wall_lost = True
-        self.corner_count = 0
-        self.turning = False
+        self.GRID_RESOLUTION = 10  # pixels per grid cell
+        self.occupancy_grid = OccupancyGrid(self.screen, self.GRID_RESOLUTION, mode = 'minimap')  # Initialize occupancy grid
 
-        self.error = 0
-        self.previous_error = 0
-        self.I = 0
 
     def update(self, keys, walls, collision_map):
         # Uses speed and angle to calculate velocity
@@ -69,6 +68,13 @@ class Car:
         data = self.get_lidar_measurements(collision_map)
         lidar_data = [d[0] for d in data]
         self.apply_control(lidar_data)
+
+        # Update the occupancy grid with the collision map
+        self.lidar_res = 10  # resolution of the lidar in pixels
+        for distance, (x, y) in data:
+            if (distance < (LIDAR_RANGE - self.lidar_res)):  # Only mark hits
+                self.occupancy_grid.mark_occupied(x, y)
+        
 
     def apply_control(self, lidar_data):
         """
@@ -136,6 +142,7 @@ class Car:
             b = int(255 * (1 - normalized))
             pygame.draw.circle(screen, (r, g, b), point, 5)
 
+        self.occupancy_grid.draw(screen, position=(0, 0), size=(100, 100))
             
 
     def get_lidar_measurements(self, collision_map):
@@ -173,7 +180,15 @@ class Car:
                 x = int(self.position[0] + LIDAR_RANGE * cos_a)
                 y = int(self.position[1] + LIDAR_RANGE * sin_a)
                 measurements.append((LIDAR_RANGE, (x, y)))
-
+        # add noise
+        noise = np.random.normal(0, 3, len(measurements))
+        for i in range(len(measurements)):
+            dist, point = measurements[i]
+            dist += noise[i]
+            dist = max(0, min(LIDAR_RANGE, dist))
+            x = int(self.position[0] + dist * cos_vals[i])
+            y = int(self.position[1] + dist * sin_vals[i])
+            measurements[i] = (dist, (x, y))
         return measurements
 
 
