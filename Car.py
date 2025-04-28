@@ -70,7 +70,7 @@ class Car:
         self.apply_control(lidar_data)
 
         # Update the occupancy grid with the collision map
-        self.lidar_res = 10  # resolution of the lidar in pixels
+        self.lidar_res = 15  # resolution of the lidar in pixels
         for distance, (x, y) in data:
             if (distance < (LIDAR_RANGE - self.lidar_res)):  # Only mark hits
                 self.occupancy_grid.mark_occupied(x, y)
@@ -142,7 +142,7 @@ class Car:
             b = int(255 * (1 - normalized))
             pygame.draw.circle(screen, (r, g, b), point, 5)
 
-        self.occupancy_grid.draw(screen, position=(0, 0), size=(100, 100))
+        self.occupancy_grid.draw(screen, position=(0, 0), size=(200, 200))
             
 
     def get_lidar_measurements(self, collision_map):
