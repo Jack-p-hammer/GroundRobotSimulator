@@ -1,15 +1,16 @@
 import pygame
 import numpy as np
 import math
-from Occupancygrid import OccupancyGrid 
-
-
+from Perception import OccupancyGrid 
+from Sensors import Lidar
 
 # Constants
 CAR_SIZE = (40, 20)
 LIDAR_RANGE = 300
 NUM_LIDAR_POINTS = 120
+LIDAR_RESOLUTION = 13  # in pixels
 
+GRID_RESOLUTION = 10  # pixels per grid cell
 
 # Car Class
 class Car:
@@ -29,9 +30,10 @@ class Car:
         self.angle = angle
         self.angular_velocity = 0.0
 
-        self.GRID_RESOLUTION = 10  # pixels per grid cell
-        self.occupancy_grid = OccupancyGrid(self.screen, self.GRID_RESOLUTION, mode = 'minimap')  # Initialize occupancy grid
-
+        self.occupancy_grid = OccupancyGrid(self.screen, GRID_RESOLUTION, 'minimap', (5, 5), (200, 200))  # Initialize occupancy grid
+        self.lidar = Lidar(NUM_LIDAR_POINTS, self.screen, LIDAR_RANGE, resolution=LIDAR_RESOLUTION)
+        self.subjects = [self.occupancy_grid, self.lidar]
+          # Initialize LiDAR sensor
 
     def update(self, keys, walls, collision_map):
         # Uses speed and angle to calculate velocity
@@ -65,13 +67,14 @@ class Car:
             self.reset_position()
             return True  # Collision detected
         
-        data = self.get_lidar_measurements(collision_map)
-        lidar_data = [d[0] for d in data]
-        self.apply_control(lidar_data)
+        # data = self.get_lidar_measurements(collision_map)
+        data = self.lidar.get_readings(collision_map, self.position, self.angle)
+        distance_data = [d[0] for d in data]
+        self.apply_control(distance_data)
 
         # Update the occupancy grid with the collision map
         self.lidar_res = 15  # resolution of the lidar in pixels
-        for distance, (x, y) in data:
+        for distance, x, y in data:
             if (distance < (LIDAR_RANGE - self.lidar_res)):  # Only mark hits
                 self.occupancy_grid.mark_occupied(x, y)
         
@@ -134,66 +137,11 @@ class Car:
         pygame.draw.line(screen, (0, 0, 0), (self.position[0], self.position[1]), (arrow_x, arrow_y), 3)
         pygame.draw.circle(screen, (0, 0, 0), (arrow_x, arrow_y), 5)
 
-        lidar = self.get_lidar_measurements(collision_map)
-        for distance, point in lidar:
-            normalized = distance / LIDAR_RANGE
-            r = int(255 * normalized)
-            g = 0
-            b = int(255 * (1 - normalized))
-            pygame.draw.circle(screen, (r, g, b), point, 5)
-
-        self.occupancy_grid.draw(screen, position=(0, 0), size=(200, 200))
-            
-
-    def get_lidar_measurements(self, collision_map):
-        """
-        Uses a precomputed collision map (2D boolean array) to simulate
-        fast LiDAR raycasting. Returns both distance and hit point.
-        """
-        measurements = []
-        height, width = collision_map.shape[1], collision_map.shape[0]  # x = width, y = height
-
-        # Precompute angle values
-        angles = [
-            math.radians(self.angle + i * (360 / NUM_LIDAR_POINTS))
-            for i in range(NUM_LIDAR_POINTS)
-        ]
-        cos_vals = [math.cos(a) for a in angles]
-        sin_vals = [math.sin(a) for a in angles]
-
-        for i in range(NUM_LIDAR_POINTS):
-            cos_a = cos_vals[i]
-            sin_a = sin_vals[i]
-
-            for dist in range(0, LIDAR_RANGE, 2):  # Step by 2 for speed
-                x = int(self.position[0] + dist * cos_a)
-                y = int(self.position[1] + dist * sin_a)
-
-                if x < 0 or x >= width or y < 0 or y >= height:
-                    measurements.append((dist, (x, y)))
-                    break
-
-                if collision_map[x, y]:
-                    measurements.append((dist, (x, y)))
-                    break
-            else:
-                x = int(self.position[0] + LIDAR_RANGE * cos_a)
-                y = int(self.position[1] + LIDAR_RANGE * sin_a)
-                measurements.append((LIDAR_RANGE, (x, y)))
-        # add noise
-        noise = np.random.normal(0, 3, len(measurements))
-        for i in range(len(measurements)):
-            dist, point = measurements[i]
-            dist += noise[i]
-            dist = max(0, min(LIDAR_RANGE, dist))
-            x = int(self.position[0] + dist * cos_vals[i])
-            y = int(self.position[1] + dist * sin_vals[i])
-            measurements[i] = (dist, (x, y))
-        return measurements
-
-
-
-
+        # self.lidar.draw()
+        # self.occupancy_grid.draw(screen, position=(0, 0), size=(200, 200))
+        for subject in self.subjects:
+            subject.draw()
+        
 # Run this only if you are running the file directly
 if __name__ == '__main__':
     print("\nYou are running the car class directly.\n")
