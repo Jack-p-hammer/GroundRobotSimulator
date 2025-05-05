@@ -75,3 +75,81 @@ class Lidar(sensor):
             g = 0
             b = int(255 * (1 - normalized))
             pygame.draw.circle(self.screen, (r, g, b), point, 5)
+
+
+class Distance(sensor):
+    """
+    A simple distance sensor that returns the distance infront of the vehicle/object.
+    It uses a precomputed collision map (2D boolean array) to simulate fast raycasting.
+    """
+    def __init__(self,  screen, range, resolution=1):
+        num_points = 1
+        super().__init__(num_points, screen)
+        self.range = range
+        self.data = np.zeros((1,3), dtype=float)
+        self.resolution = resolution  # in pixels
+
+    def get_readings(self, collision_map, position, angle):
+        """"
+        uses a precomputed collision map (2D boolean array) to simulate a single distance sensor
+        """
+        LIDAR_RANGE = self.range
+        height, width = collision_map.shape[1], collision_map.shape[0]  # x = width, y = height
+
+        # Precompute angle values
+        angles = math.radians(angle)
+    
+        cos_a = math.cos(angles)
+        sin_a = math.sin(angles)
+        for dist in range(0, LIDAR_RANGE, 2):  # Step by 2 for speed
+            x = int(position[0] + dist * cos_a)
+            y = int(position[1] + dist * sin_a)
+            if x < 0 or x >= width or y < 0 or y >= height:
+                self.data = dist, x, y
+                break
+            if collision_map[x, y]:
+                self.data = dist, x, y
+                break
+        else:
+            x = int(position[0] + LIDAR_RANGE * cos_a)
+            y = int(position[1] + LIDAR_RANGE * sin_a)
+            self.data = LIDAR_RANGE, x, y
+        
+        return self.data
+
+    def draw(self):
+        point = self.data[1:]
+        r = 255
+        g = 255
+        b = 255
+        pygame.draw.circle(self.screen, (r, g, b), point, 10)
+
+class IMU(sensor):
+    """
+    A simple IMU sensor that returns the angle of the vehicle/object.
+    It uses a precomputed collision map (2D boolean array) to simulate fast raycasting.
+    """
+    def __init__(self, screen, range, resolution=1):
+        num_points = 1
+        super().__init__(num_points, screen)
+        self.range = range
+        self.data = np.zeros((1,3), dtype=float)
+        self.resolution = resolution 
+
+    def get_readings(self):
+        raise NotImplementedError("This method should be overridden by subclasses")
+    
+class GPS(sensor):
+    """
+    A simple GPS sensor that returns the position of the vehicle/object.
+    It uses a precomputed collision map (2D boolean array) to simulate fast raycasting.
+    """
+    def __init__(self, screen, range, resolution=1):
+        num_points = 1
+        super().__init__(num_points, screen)
+        self.range = range
+        self.data = np.zeros((1,2), dtype=float)
+        self.resolution = resolution 
+
+    def get_readings(self):
+        raise NotImplementedError("This method should be overridden by subclasses")

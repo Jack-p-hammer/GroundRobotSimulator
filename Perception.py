@@ -43,6 +43,13 @@ class OccupancyGrid:
         if 0 <= i < self.grid_width and 0 <= j < self.grid_height:
             self.grid[i, j] = 255
             self.surface.set_at((i, j), (100, 0, 0))  # occupied = black
+    
+    def mark_occupied_routine(self, lidar_data, lidar_res, lidar_range):
+        """Mark points as occupied based on full LiDAR data."""
+        for distance, x, y in lidar_data:
+            if (distance < (lidar_range - lidar_res)):  # Only mark hits
+                self.mark_occupied(x, y)
+  
 
     def mark_free(self, x, y):
         """Mark a (world) point as free."""

@@ -3,6 +3,7 @@ import numpy as np
 import math
 from Perception import OccupancyGrid 
 from Sensors import Lidar
+from Sensors import Distance
 
 # Constants
 CAR_SIZE = (40, 20)
@@ -30,10 +31,12 @@ class Car:
         self.angle = angle
         self.angular_velocity = 0.0
 
+
+        # Create Subjects (What car uses to perceive the world)
         self.occupancy_grid = OccupancyGrid(self.screen, GRID_RESOLUTION, 'minimap', (5, 5), (200, 200))  # Initialize occupancy grid
-        self.lidar = Lidar(NUM_LIDAR_POINTS, self.screen, LIDAR_RANGE, resolution=LIDAR_RESOLUTION)
-        self.subjects = [self.occupancy_grid, self.lidar]
-          # Initialize LiDAR sensor
+        self.lidar = Lidar(NUM_LIDAR_POINTS, self.screen, LIDAR_RANGE, resolution=LIDAR_RESOLUTION) # Initialize LiDAR sensor
+        self.dist = Distance(self.screen, 240, resolution=10)  # Initialize distance sensor
+        self.subjects = [self.lidar, self.occupancy_grid, self.dist]  # List of subjects for the car to perceive the world
 
     def update(self, keys, walls, collision_map):
         # Uses speed and angle to calculate velocity
@@ -67,16 +70,15 @@ class Car:
             self.reset_position()
             return True  # Collision detected
         
-        # data = self.get_lidar_measurements(collision_map)
+
         data = self.lidar.get_readings(collision_map, self.position, self.angle)
+        front_distance = self.dist.get_readings(collision_map, self.position, self.angle)
         distance_data = [d[0] for d in data]
         self.apply_control(distance_data)
 
         # Update the occupancy grid with the collision map
-        self.lidar_res = 15  # resolution of the lidar in pixels
-        for distance, x, y in data:
-            if (distance < (LIDAR_RANGE - self.lidar_res)):  # Only mark hits
-                self.occupancy_grid.mark_occupied(x, y)
+        self.occupancy_grid.mark_occupied_routine(data, LIDAR_RESOLUTION, LIDAR_RANGE)
+        
         
 
     def apply_control(self, lidar_data):
@@ -137,8 +139,7 @@ class Car:
         pygame.draw.line(screen, (0, 0, 0), (self.position[0], self.position[1]), (arrow_x, arrow_y), 3)
         pygame.draw.circle(screen, (0, 0, 0), (arrow_x, arrow_y), 5)
 
-        # self.lidar.draw()
-        # self.occupancy_grid.draw(screen, position=(0, 0), size=(200, 200))
+
         for subject in self.subjects:
             subject.draw()
         
