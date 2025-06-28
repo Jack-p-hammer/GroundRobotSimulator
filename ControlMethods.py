@@ -1,3 +1,12 @@
 import numpy as np
 
-# impliment pure pursuit control method
+# Create general control method class that acts as the parents for specific methods:
+ 
+class Controller:
+    def __init__(self, robot):
+        pass
+    
+
+# Impliment pure pursuit
+class PurePursuit(Controller):
+    def __init__(self):

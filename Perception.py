@@ -1,7 +1,5 @@
 import numpy as np
 import pygame
-import math
-
 
 class OccupancyGrid:
     def __init__(self, screen, resolution, mode="minimap", position=(10, 10), size=(200, 200)):
@@ -50,7 +48,6 @@ class OccupancyGrid:
             if (distance < (lidar_range - lidar_res)):  # Only mark hits
                 self.mark_occupied(x, y)
   
-
     def mark_free(self, x, y):
         """Mark a (world) point as free."""
         i, j = self.world_to_grid(x, y)
