@@ -1,0 +1,18 @@
+services:
+  pygame-app:
+    image: sim        # ← replace with the tag you built
+    container_name: sim
+    environment:
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    stdin_open: true
+    tty: true
+    network_mode: host
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"                   # Expose Redis port
+    restart: unless-stopped

@@ -9,12 +9,27 @@ cars:
     position: [400, 200]
     angle: 0
     speed: 0.75
-  # - id: car2
-  #   position: [700, 500]
-  #   angle: 180
-  #   speed: 2
+    subjects: # Optional subjects for the car
+      - type: "OccupancyGrid"
+        position: [300, 250]
+        speed: 0.5
+      - type: "DistanceSensor"
+        position: [500, 300]
+        state: "green"
+      - type: "2D Lidar"
+        position: [600, 400]
+        state: "red"
+
+  - id: car2
+    position: [700, 500]
+    angle: 180
+    speed: 2
 
 obstacles:
   - [200, 150, 100, 100]
   - [500, 100, 50, 300]
   - [300, 400, 250, 50]
+
+server:
+  - host: "localhost"
+    port: 6379

@@ -10,3 +10,4 @@ class Controller:
 # Impliment pure pursuit
 class PurePursuit(Controller):
     def __init__(self):
+        pass
