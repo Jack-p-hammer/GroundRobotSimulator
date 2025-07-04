@@ -1,6 +1,6 @@
 FROM python:3.12
 
-WORKDIR /GroundRobots
+WORKDIR /app
 
 COPY requirements.txt ./
 COPY Car.py ./

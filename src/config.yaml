@@ -9,7 +9,7 @@ cars:
     position: [400, 200]
     angle: 0
     speed: 0.75
-<<<<<<< HEAD
+    
     subjects: # Optional subjects for the car
       - type: "OccupancyGrid"
         position: [300, 250]
@@ -30,7 +30,6 @@ obstacles:
   - [200, 150, 100, 100]
   - [500, 100, 50, 300]
   - [300, 400, 250, 50]
-<<<<<<< HEAD
 
 server:
   - host: "localhost"
