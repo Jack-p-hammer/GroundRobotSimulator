@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 import math
+
 from Perception import OccupancyGrid 
 from Sensors import Lidar
 from Sensors import Distance
@@ -30,7 +31,6 @@ class Car:
         self.velocity = np.array([speed * math.cos(math.radians(angle)), speed * math.sin(math.radians(angle))], dtype=float)
         self.angle = angle
         self.angular_velocity = 0.0
-
 
         # Create Subjects (What car uses to perceive the world)
         self.occupancy_grid = OccupancyGrid(self.screen, GRID_RESOLUTION, 'minimap', (5, 5), (200, 200))  # Initialize occupancy grid
@@ -79,7 +79,7 @@ class Car:
         # Update the occupancy grid with the collision map
         self.occupancy_grid.mark_occupied_routine(data, LIDAR_RESOLUTION, LIDAR_RANGE)
         
-        
+    
 
     def apply_control(self, lidar_data):
         """
@@ -138,7 +138,6 @@ class Car:
         arrow_y = self.position[1] + arrow_length * math.sin(math.radians(self.angle))
         pygame.draw.line(screen, (0, 0, 0), (self.position[0], self.position[1]), (arrow_x, arrow_y), 3)
         pygame.draw.circle(screen, (0, 0, 0), (arrow_x, arrow_y), 5)
-
 
         for subject in self.subjects:
             subject.draw()
