@@ -4,12 +4,28 @@ import pygame
 import yaml
 from Car import Car
 import numpy as np
+import argparse
+
+parser = argparse.ArgumentParser(description='A script that demonstrates argument parsing.')
+
+
+parser.add_argument('input_file', help='The path to the input file.')
+args = parser.parse_args()
+
+print(f"Input file: {args.input_file}")
+
+
+config_file = args.input_file
+if not os.path.exists(config_file):
+    print(f"Config file '{config_file}' does not exist. Please provide a valid path.")
+    exit(1)
+
 
 print("\n\n")
 print("Loading config file and setting up simulation...\n")
 try:
     # Load config
-    with open("config.yaml", "r") as f:
+    with open(config_file, "r") as f:
         config = yaml.safe_load(f)
 
     WIDTH = config["window"]["width"]
@@ -39,6 +55,7 @@ try:
     # Instantiate all cars from config
     cars = []
     for car_cfg in config["cars"]:
+        print(f"Loading car: {car_cfg['id']}")
         car = Car(
             origin=car_cfg["position"],
             angle=car_cfg["angle"],
@@ -47,6 +64,7 @@ try:
         )
         cars.append(car)
     
+    # Need to impliment the subjects via config file above
 
     print("simulation loaded.\n")
 except:

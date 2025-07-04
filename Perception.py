@@ -1,9 +1,8 @@
 import numpy as np
 import pygame
-import math
 
 class OccupancyGrid:
-    def __init__(self, screen, resolution, mode="minimap"):
+    def __init__(self, screen, resolution, mode="minimap", position=(10, 10), size=(200, 200)):
         """
         Args:
             width (int): map width in pixels
@@ -16,6 +15,9 @@ class OccupancyGrid:
         self.resolution = resolution
         self.mode = mode  # 'minimap' or 'full'
 
+        self.size = size
+        self.position = position
+        
         self.grid_width = self.width // resolution
         self.grid_height = self.height // resolution
 
@@ -39,7 +41,13 @@ class OccupancyGrid:
         if 0 <= i < self.grid_width and 0 <= j < self.grid_height:
             self.grid[i, j] = 255
             self.surface.set_at((i, j), (100, 0, 0))  # occupied = black
-
+    
+    def mark_occupied_routine(self, lidar_data, lidar_res, lidar_range):
+        """Mark points as occupied based on full LiDAR data."""
+        for distance, x, y in lidar_data:
+            if (distance < (lidar_range - lidar_res)):  # Only mark hits
+                self.mark_occupied(x, y)
+  
     def mark_free(self, x, y):
         """Mark a (world) point as free."""
         i, j = self.world_to_grid(x, y)
@@ -47,18 +55,18 @@ class OccupancyGrid:
             self.grid[i, j] = 0
             self.surface.set_at((i, j), (255, 255, 255))  # free = white
 
-    def draw(self, screen, position=(10, 10), size=(200, 200)):
+    def draw(self):
         """Draw the map onto the main screen.
 
         - If mode == 'minimap', it draws a small version in the corner.
         - If mode == 'full', it scales to the entire window size.
         """
         if self.mode == "minimap":
-            mini_map = pygame.transform.scale(self.surface, size)
-            screen.blit(mini_map, position)
+            mini_map = pygame.transform.scale(self.surface, self.size)
+            self.screen.blit(mini_map, self.position)
         elif self.mode == "full":
             full_map = pygame.transform.scale(self.surface, (self.width, self.height))
-            screen.blit(full_map, (0, 0))
+            self.screen.blit(full_map, (0, 0))
         else:
             raise ValueError("Invalid mode. Choose 'minimap' or 'full'.")
 
