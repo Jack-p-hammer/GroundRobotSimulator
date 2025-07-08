@@ -30,7 +30,7 @@ try:
 
     WIDTH = config["window"]["width"]
     HEIGHT = config["window"]["height"]
-    FPS = 60
+    FPS = config["window"]["FPS"]
     BG_COLOR = (220, 220, 220)
     WALL_COLOR = (0, 0, 0)
     
@@ -55,12 +55,15 @@ try:
     # Instantiate all cars from config
     cars = []
     for car_cfg in config["cars"]:
-        print(f"Loading car: {car_cfg['id']}")
         car = Car(
             origin=car_cfg["position"],
             angle=car_cfg["angle"],
             speed=car_cfg["speed"],
-            screen=screen
+            screen=screen,
+            car_size= car_cfg["size"],
+            add_ons= car_cfg.get("subjects", []),  # Pass subjects as add-ons
+            channels = car_cfg.get("channels", []),
+            server = config["server"]
         )
         cars.append(car)
     
@@ -104,7 +107,7 @@ def main():
         # Check key presses for various actions
         if keys[pygame.K_ESCAPE]: # Pressing Escape Closes Window
             running = False
-        if keys[pygame.K_r]: # {Pressing resets all cars to their original positions}
+        if keys[pygame.K_r]: # {Pressing r resets all cars to their original positions}
             for car in cars:
                 car.reset_position()
         

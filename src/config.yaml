@@ -3,28 +3,51 @@ window:
   height: 600
   background_color: [255, 255, 255]
   title: "Car Simulation Window"
+  FPS: 60
 
 cars:
   - id: car1
     position: [400, 200]
     angle: 0
     speed: 0.75
+    size: [40, 20]
     
     subjects: # Optional subjects for the car
       - type: "OccupancyGrid"
-        position: [300, 250]
-        speed: 0.5
+        resolution: 10
+        mode: "minimap"
+        position: [5, 5]
+        size: [200, 200]
       - type: "DistanceSensor"
-        position: [500, 300]
-        state: "green"
+        range: 300
+        resolution: 1
       - type: "2D Lidar"
-        position: [600, 400]
-        state: "red"
+        num_points: 120
+        range:  300
+        resolution: 1
+      - type: "IMU"
+        resolution: 1
+    
+    channels:
+      - type: "Publisher Channels"
+        channels: ["Points"]
+      - type: "Subscriber Channels"
+        channels: ["Points"]
 
-  - id: car2
-    position: [700, 500]
-    angle: 180
-    speed: 2
+  # - id: car2
+  #   position: [700, 500]
+  #   angle: 180
+  #   speed: 2
+  #   subjects: # Optional subjects for the car
+  #     - type: "OccupancyGrid"
+  #       resolution: 10
+  #       mode: "minimap"
+  #       position: [600, 5]
+  #       size: [200, 200]
+  #     - type: "2D Lidar"
+  #       num_points: 90
+  #       range:  150
+  #       resolution: .5
 
 obstacles:
   - [200, 150, 100, 100]
@@ -34,3 +57,4 @@ obstacles:
 server:
   - host: "localhost"
     port: 6379
+    channels: ["points"]

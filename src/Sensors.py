@@ -13,10 +13,11 @@ class sensor(object):
         self.num_points = num_points
         self.screen = screen
 
-
     def get_readings(self):
         raise NotImplementedError("This method should be overridden by subclasses")
-
+    
+    def __name__(self):
+        raise NotImplementedError("This method should be overridden by subclasses")
 
 class Lidar(sensor):
     def __init__(self, num_points, screen, range, resolution=1):
@@ -25,11 +26,16 @@ class Lidar(sensor):
         self.data = np.zeros((num_points,3), dtype=float)
         self.resolution = resolution  # in pixels
 
-    def get_readings(self, collision_map, position, angle):
+    def get_readings(self, collision_map, body_data):
         """
         Uses a precomputed collision map (2D boolean array) to simulate
-        fast LiDAR raycasting. Returns both distance and hit point.
+        fast LiDAR raycasting. 
+        
+        Returns numpy array with num_points rows with distance in first column 
+        and hit points (x and y) in 2nd and 3rd columns.
         """
+        position = body_data[0,:]
+        angle = body_data[2,0]
         NUM_LIDAR_POINTS = self.num_points
         LIDAR_RANGE = self.range
         height, width = collision_map.shape[1], collision_map.shape[0]  # x = width, y = height
@@ -75,6 +81,9 @@ class Lidar(sensor):
             g = 0
             b = int(255 * (1 - normalized))
             pygame.draw.circle(self.screen, (r, g, b), point, 5)
+    
+    def __name__(self):
+        return "2D Lidar"
 
 
 class Distance(sensor):
@@ -89,10 +98,14 @@ class Distance(sensor):
         self.data = np.zeros((1,3), dtype=float)
         self.resolution = resolution  # in pixels
 
-    def get_readings(self, collision_map, position, angle):
+    def get_readings(self, collision_map, body_data):
         """"
         uses a precomputed collision map (2D boolean array) to simulate a single distance sensor
+
+        returns a single value 
         """
+        position = body_data[0,:]
+        angle = body_data[2,0]
         LIDAR_RANGE = self.range
         height, width = collision_map.shape[1], collision_map.shape[0]  # x = width, y = height
 
@@ -124,25 +137,50 @@ class Distance(sensor):
         b = 255
         pygame.draw.circle(self.screen, (r, g, b), point, 10)
 
+    def __name__(self):
+        return "DistanceSensor"
+
 class IMU(sensor):
     """
     A simple IMU sensor that returns the angle of the vehicle/object.
-    It uses a precomputed collision map (2D boolean array) to simulate fast raycasting.
     """
-    def __init__(self, screen, range, resolution=1):
+    def __init__(self, screen, resolution):
         num_points = 1
         super().__init__(num_points, screen)
-        self.range = range
         self.data = np.zeros((1,3), dtype=float)
-        self.resolution = resolution 
+        self.resolution = resolution
+        self.prev_lin_vel = 0
+        self.prev_rot_vel = 0
+        
 
-    def get_readings(self):
-        raise NotImplementedError("This method should be overridden by subclasses")
+    def get_readings(self, collision_map, body_data):
+        """
+        returns a noised linear velocity and acceleration
+        and rotational velocity and acceleration
+        """
+   
+        position = body_data[0,:]
+        velocity = body_data[1,:]
+        angle_pos = body_data[2,0]
+        angle_vel = body_data[3,0]        
+        lin_velocity_noise = np.random.normal(0, self.resolution, body_data[1,0].shape)
+        rot_velocity_noise = np.random.normal(0, self.resolution, body_data[3,0].shape)
+
+        lin_accel = (velocity - self.prev_lin_vel) / (1/60)
+        rot_accel = (angle_vel - self.prev_rot_vel) / (1/60)
+        return lin_accel, rot_accel
+    
+    def __name__(self):
+        return "IMU"
+    
+    def draw(self):
+        pass
+    
+
     
 class GPS(sensor):
     """
     A simple GPS sensor that returns the position of the vehicle/object.
-    It uses a precomputed collision map (2D boolean array) to simulate fast raycasting.
     """
     def __init__(self, screen, range, resolution=1):
         num_points = 1

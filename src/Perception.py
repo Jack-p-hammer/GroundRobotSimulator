@@ -8,7 +8,7 @@ class OccupancyGrid:
             width (int): map width in pixels
             height (int): map height in pixels
             resolution (int): size of each grid cell in pixels
-            mode (str): 'minimap' or 'full' size display
+            mode (str): 'minimap' or 'full' or 'none' size display
         """
         self.screen = screen
         self.width, self.height = screen.get_size()
@@ -42,8 +42,15 @@ class OccupancyGrid:
             self.grid[i, j] = 255
             self.surface.set_at((i, j), (100, 0, 0))  # occupied = black
     
-    def mark_occupied_routine(self, lidar_data, lidar_res, lidar_range):
+    def update(self, all_data, sensors):
+
         """Mark points as occupied based on full LiDAR data."""
+        lidar_data = all_data["2D Lidar"]
+        for sensor in sensors:
+            if sensor.__name__() == '2D Lidar':
+                lidar_range = sensor.range
+                lidar_res = sensor.resolution
+
         for distance, x, y in lidar_data:
             if (distance < (lidar_range - lidar_res)):  # Only mark hits
                 self.mark_occupied(x, y)
@@ -60,17 +67,24 @@ class OccupancyGrid:
 
         - If mode == 'minimap', it draws a small version in the corner.
         - If mode == 'full', it scales to the entire window size.
+        - If mode == 'none', it does not draw anything.
         """
+
         if self.mode == "minimap":
             mini_map = pygame.transform.scale(self.surface, self.size)
             self.screen.blit(mini_map, self.position)
         elif self.mode == "full":
             full_map = pygame.transform.scale(self.surface, (self.width, self.height))
             self.screen.blit(full_map, (0, 0))
+        elif self.mode == 'none':
+            pass # No map drawn
         else:
-            raise ValueError("Invalid mode. Choose 'minimap' or 'full'.")
+            raise ValueError(f"Invalid mode. Choose 'minimap' or 'full' or 'none' not {self.mode}.")
 
     def reset(self):
         """Clear the map to unknown."""
         self.grid.fill(127)
         self.surface.fill((127, 127, 127))
+
+    def __name__(self):
+        return 'DistanceSensor'
