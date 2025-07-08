@@ -6,3 +6,6 @@ To run as a container:
 (In WSL)
 xhost +local:docker
 docker compose up --build
+
+
+![image](https://github.com/user-attachments/assets/893ce3f6-84ef-4faf-8c51-9b9180275eb2)
