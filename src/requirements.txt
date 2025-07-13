@@ -1,4 +1,0 @@
-redis
-numpy
-pygame
-pyyaml
