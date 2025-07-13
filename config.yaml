@@ -2,7 +2,7 @@ window:
   width: 800
   height: 600
   background_color: [255, 255, 255]
-  title: "Car Simulation Window"
+  title: "Ground Robot Navigation Simulation"
   FPS: 60
 
 cars:
@@ -37,22 +37,34 @@ cars:
   # - id: car2
   #   position: [700, 500]
   #   angle: 180
-  #   speed: 2
+  #   speed: 1.0
+  #   size: [35, 18]
+    
   #   subjects: # Optional subjects for the car
   #     - type: "OccupancyGrid"
-  #       resolution: 10
+  #       resolution: 15
   #       mode: "minimap"
   #       position: [600, 5]
-  #       size: [200, 200]
+  #       size: [180, 180]
   #     - type: "2D Lidar"
   #       num_points: 90
-  #       range:  150
-  #       resolution: .5
+  #       range:  250
+  #       resolution: 1
+  #     - type: "IMU"
+  #       resolution: 1
+    
+  #   channels:
+  #     - type: "Publisher Channels"
+  #       channels: ["Points"]
+  #     - type: "Subscriber Channels"
+  #       channels: ["Points"]
 
 obstacles:
   - [200, 150, 100, 100]
   - [500, 100, 50, 300]
   - [300, 400, 250, 50]
+  - [100, 300, 80, 80]
+  - [600, 350, 60, 120]
 
 server:
   - host: "localhost"

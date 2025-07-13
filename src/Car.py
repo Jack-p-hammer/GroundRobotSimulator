@@ -3,10 +3,11 @@ import numpy as np
 import math
 import redis
 
-from Perception import OccupancyGrid 
-from Sensors import Lidar
-from Sensors import Distance
-from Sensors import IMU
+from src.Perception import OccupancyGrid 
+from src.Sensors import Lidar
+from src.Sensors import Distance
+from src.Sensors import IMU
+from src.ControlMethods import NavigationController, ObstacleAvoidanceController, ExplorationController
 
 
 # Car Class
@@ -28,17 +29,23 @@ class Car:
         self.angle = angle
         self.angular_velocity = 0.0
 
-
         self.BODY_DATA = np.array([self.position,
                                   self.velocity,
                                   [self.angle, 0],
                                   [self.angular_velocity, 0]])
         
+        # Navigation and control
+        self.navigation_controller = NavigationController(self)
+        self.obstacle_avoidance = ObstacleAvoidanceController(self)
+        self.exploration_controller = ExplorationController(self)
         
-
+        # Control mode: 'manual', 'navigation', 'exploration', 'autonomous'
+        self.control_mode = 'manual'
+        self.active_controller = None
 
         self.setup_channels(channels)
-        self.setup_server(server[0])
+        if server and len(server) > 0:
+            self.setup_server(server[0])
 
         self.sensors = list()
         self.perceptors = list()
@@ -63,7 +70,6 @@ class Car:
 
         pass
 
-
     def setup_subjects(self, extras):
         """
         Setup additional subjects for the car based on the extras parameter.
@@ -85,15 +91,100 @@ class Car:
                 self.sensors.append(self.IMU)
                 self.data[sensor_dict['type']] = 0
 
-
             elif sensor_dict['type'] == 'OccupancyGrid':
-                self.occupancy_grid = OccupancyGrid(self.screen, sensor_dict['resolution'], sensor_dict['mode'], sensor_dict['position'], sensor_dict['size'])
+                self.occupancy_grid = OccupancyGrid(
+                    self.screen,
+                    sensor_dict['resolution'],
+                    sensor_dict['mode'],
+                    sensor_dict['position'],
+                    sensor_dict['size'],
+                    robot_width=self.CAR_SIZE[0],
+                    safety_margin=2
+                )
                 self.perceptors.append(self.occupancy_grid)
 
             else:
                 print(f"Extra type '{sensor_dict['type']}' does not exist in the code base (yet), add it! ")
 
-    
+    def set_control_mode(self, mode):
+        """Set the control mode for the car."""
+        self.control_mode = mode
+        
+        # Deactivate all controllers
+        self.navigation_controller.deactivate()
+        self.obstacle_avoidance.deactivate()
+        self.exploration_controller.deactivate()
+        
+        # Activate appropriate controller
+        if mode == 'navigation':
+            self.active_controller = self.navigation_controller
+            self.navigation_controller.activate()
+        elif mode == 'exploration':
+            self.active_controller = self.exploration_controller
+            self.exploration_controller.activate()
+        elif mode == 'autonomous':
+            # Autonomous mode uses both navigation and obstacle avoidance
+            self.navigation_controller.activate()
+            self.obstacle_avoidance.activate()
+            self.active_controller = self.navigation_controller
+        else:  # manual
+            self.active_controller = None
+
+    def set_goal(self, goal_x, goal_y):
+        """Set a navigation goal."""
+        if hasattr(self, 'occupancy_grid'):
+            # Set goal in occupancy grid
+            self.occupancy_grid.set_goal(goal_x, goal_y)
+            
+            # Find path to goal
+            path = self.occupancy_grid.find_path_to_goal(self.position)
+            
+            if path:
+                # Convert grid path to world coordinates
+                world_path = []
+                for grid_point in path:
+                    world_x, world_y = self.occupancy_grid.grid_to_world(grid_point[0], grid_point[1])
+                    world_path.append([world_x, world_y])
+                
+                # Set path in navigation controller
+                self.navigation_controller.set_path(world_path)
+                self.navigation_controller.set_goal(goal_x, goal_y)
+                
+                # Switch to navigation mode
+                self.set_control_mode('navigation')
+                return True
+            else:
+                print("No path found to goal!")
+                return False
+        else:
+            # No occupancy grid, use direct navigation
+            self.navigation_controller.set_goal(goal_x, goal_y)
+            self.set_control_mode('navigation')
+            return True
+
+    def handle_mouse_click(self, mouse_pos):
+        """Handle mouse clicks for goal setting on minimap."""
+        if hasattr(self, 'occupancy_grid') and self.occupancy_grid.mode == "minimap":
+            # Check if click is within minimap bounds
+            map_x, map_y = self.occupancy_grid.position
+            map_width, map_height = self.occupancy_grid.size
+            
+            if (map_x <= mouse_pos[0] <= map_x + map_width and 
+                map_y <= mouse_pos[1] <= map_y + map_height):
+                
+                # Convert minimap coordinates to world coordinates
+                relative_x = (mouse_pos[0] - map_x) / map_width
+                relative_y = (mouse_pos[1] - map_y) / map_height
+                
+                world_x = relative_x * self.width
+                world_y = relative_y * self.height
+                
+                # Set goal
+                success = self.set_goal(world_x, world_y)
+                if success:
+                    print(f"Goal set at ({world_x:.1f}, {world_y:.1f})")
+                return True
+        return False
 
     def update(self, keys, walls, collision_map):
         # Uses speed and angle to calculate velocity
@@ -114,18 +205,28 @@ class Car:
                             [self.angle, 0],
                             [self.angular_velocity, 0]])
 
-        # Check for key presses to control the car
-        if keys[pygame.K_UP]:
-            self.speed += 0.1
-        if keys[pygame.K_DOWN]:
-            self.speed -= 0.1
-        if keys[pygame.K_LEFT]:
-            self.angular_velocity -= 1.0
-        if keys[pygame.K_RIGHT]:
-            self.angular_velocity += 1.0
-        if keys[pygame.K_SPACE]:
-            self.speed = 0.0
-            self.angular_velocity = 0.0
+        # Handle control based on mode
+        if self.control_mode == 'manual':
+            # Manual control with keyboard
+            if keys[pygame.K_UP]:
+                self.speed += 0.1
+            if keys[pygame.K_DOWN]:
+                self.speed -= 0.1
+            if keys[pygame.K_LEFT]:
+                self.angular_velocity -= 1.0
+            if keys[pygame.K_RIGHT]:
+                self.angular_velocity += 1.0
+            if keys[pygame.K_SPACE]:
+                self.speed = 0.0
+                self.angular_velocity = 0.0
+        else:
+            # Autonomous control
+            if self.active_controller:
+                self.active_controller.update(keys, walls, collision_map)
+            
+            # Apply obstacle avoidance in autonomous modes
+            if self.control_mode == 'autonomous':
+                self.obstacle_avoidance.update(keys, walls, collision_map)
 
         # Check for collisions with walls and objects (all in walls list)
         if self.check_collision(walls):
@@ -134,11 +235,7 @@ class Car:
         
         self.get_data(col_map=collision_map)
         self.update_perceptors()
-        self.apply_control()        
         self.draw(self.screen, collision_map)
-
-
-
 
     def get_data(self, col_map):
         for sensor in self.sensors:
@@ -149,33 +246,11 @@ class Car:
     def update_perceptors(self):
         # Find lidar object
         for perceptor in self.perceptors:
-            perceptor.update(self.data, self.sensors)
-            
-
-    def apply_control(self):
-        """
-        Basic collision avoidance using LiDAR data.
-        If an obstacle is too close in front, rotate to avoid it.
-        """
-        lidar_data = self.data['2D Lidar'][:,0]
-        THRESHOLD_DISTANCE = 60  # pixels
-        ROTATION_SPEED = 15       # degrees/frame
-
-        # Get front 30° window (±15° around forward)
-        N = len(lidar_data)
-        cone_width = int(30 / 360 * N)  # number of LiDAR rays in 30°
-        front_indices = list(range(-cone_width // 2, cone_width // 2))
-
-        # Sample distances in front
-        front_distances = [lidar_data[i % N] for i in front_indices]
-
-        # Decision: too close?
-        if min(front_distances) < THRESHOLD_DISTANCE:
-            # Obstacle ahead → rotate
-            self.angular_velocity = ROTATION_SPEED
-        else:
-            # Clear → go straight
-            self.angular_velocity = 0
+            if hasattr(perceptor, 'update'):
+                if isinstance(perceptor, OccupancyGrid):
+                    perceptor.update(self.data, self.sensors, self.position)
+                else:
+                    perceptor.update(self.data, self.sensors)
 
     def check_collision(self, walls):
         car_rect = pygame.Rect(self.position[0] - self.CAR_SIZE[0] / 2, self.position[1] - self.CAR_SIZE[1] / 2, self.CAR_SIZE[0], self.CAR_SIZE[1])
@@ -205,12 +280,45 @@ class Car:
             (self.position[0] + CAR_SIZE[0] / 2 * math.cos(math.radians(self.angle)) + CAR_SIZE[1] / 2 * math.sin(math.radians(self.angle)),
              self.position[1] + CAR_SIZE[0] / 2 * math.sin(math.radians(self.angle)) - CAR_SIZE[1] / 2 * math.cos(math.radians(self.angle)))
         ]
-        pygame.draw.polygon(screen, (255, 0, 0), points)
+        
+        # Color based on control mode
+        if self.control_mode == 'manual':
+            color = (255, 0, 0)  # Red
+        elif self.control_mode == 'navigation':
+            color = (0, 255, 0)  # Green
+        elif self.control_mode == 'exploration':
+            color = (0, 0, 255)  # Blue
+        else:  # autonomous
+            color = (255, 165, 0)  # Orange
+            
+        pygame.draw.polygon(screen, color, points)
+        
+        # Draw direction arrow
         arrow_length = 30
         arrow_x = self.position[0] + arrow_length * math.cos(math.radians(self.angle))
         arrow_y = self.position[1] + arrow_length * math.sin(math.radians(self.angle))
         pygame.draw.line(screen, (0, 0, 0), (self.position[0], self.position[1]), (arrow_x, arrow_y), 3)
         pygame.draw.circle(screen, (0, 0, 0), (arrow_x, arrow_y), 5)
+
+        # Draw goal and path if in navigation mode
+        if self.control_mode == 'navigation' and self.navigation_controller.goal_position is not None:
+            goal_pos = self.navigation_controller.goal_position
+            pygame.draw.circle(screen, (0, 255, 0), (int(goal_pos[0]), int(goal_pos[1])), 10)
+            pygame.draw.circle(screen, (255, 255, 255), (int(goal_pos[0]), int(goal_pos[1])), 8)
+            
+            # Draw path on main screen
+            if hasattr(self, 'occupancy_grid') and self.occupancy_grid.path and len(self.occupancy_grid.path) > 1:
+                for i, waypoint in enumerate(self.occupancy_grid.path):
+                    if i < len(self.occupancy_grid.path) - 1:  # Don't draw line from last waypoint
+                        wx1, wy1 = self.occupancy_grid.grid_to_world(waypoint[0], waypoint[1])
+                        wx2, wy2 = self.occupancy_grid.grid_to_world(self.occupancy_grid.path[i+1][0], self.occupancy_grid.path[i+1][1])
+                        
+                        pygame.draw.line(screen, (0, 0, 255), 
+                                       (int(wx1), int(wy1)), 
+                                       (int(wx2), int(wy2)), 3)
+                        
+                        # Draw waypoint markers
+                        pygame.draw.circle(screen, (255, 0, 255), (int(wx1), int(wy1)), 5)
 
         for subject in self.subjects:
             subject.draw()
